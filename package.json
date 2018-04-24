@@ -3,9 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "konva": "^2.0.3",
+    "lodash": "^4.17.5",
+    "plotly.js": "^1.36.1",
     "react": "^16.3.2",
     "react-dom": "^16.3.2",
-    "react-scripts": "1.1.4"
+    "react-konva": "^1.7.2",
+    "react-plotly.js": "^2.1.0",
+    "react-scripts": "1.1.4",
+    "spotify-web-api-js": "^0.24.0",
+    "tsne-js": "^1.0.3"
   },
   "scripts": {
     "start": "react-scripts start",
