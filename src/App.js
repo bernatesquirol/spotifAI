@@ -2,11 +2,12 @@ import React, { Component } from 'react';
 import logo from './logo.svg';
 import './App.css';
 import queryString from 'query-string'
-import TSNE from 'tsne-js';
+
 import _ from 'lodash';
 import { Stage, Layer, Rect, Text } from "react-konva";
 import Konva from 'konva';
 import Track from './Track'
+import {InteractiveForceGraph, ForceGraphNode, ForceGraphLink} from 'react-vis-force';
 const paramsToQuery = (params) => {
   let esc = encodeURIComponent;
   let query = Object.keys(params)
@@ -14,14 +15,22 @@ const paramsToQuery = (params) => {
     .join('&');
   return query
 }
-const model = new TSNE({
-  dim: 2,
-  perplexity: 80.0,
-  earlyExaggeration: 4.0,
-  learningRate: 100.0,
-  nIter: 10,
-  metric: 'euclidean'
-});
+const GetImportance = (range)=>{
+  let returnval = 0
+  switch(range){
+    case 'short_term':
+      returnval = 1
+      break;
+    case 'medium_term':
+      returnval = 3
+      break;
+    case 'long_term':
+      returnval = 4
+      break;
+  }
+  return returnval
+}
+
 const containerWidth = window.innerWidth
 const containerHeight = window.innerHeight
 class App extends Component {
@@ -29,11 +38,7 @@ class App extends Component {
     super();
     this.state = {
       token: null,
-      tracks: {},
-      dimensions: {
-        width: -1,
-        height: -1
-      }
+      artists: {},
     }
   }
   fetchSpotify(link){
@@ -52,12 +57,16 @@ class App extends Component {
       this.setState({
         token:access_token,
         tracks:{}
-      },this.getTracks)
+      },()=>{this.getArtists(50,0,'short_term',
+              ()=>{this.getArtists(50,0,'medium_term',
+                ()=>{this.getArtists(50,0,'long_term',()=>{this.constructGraph()})})
+              })
+            })
       
     }
     
   }
-  getTracks(limit=50, offset=0, time_range='medium_term'){    
+  getArtists(limit=50, offset=0, time_range='medium_term', callback=null){    
     let params = {
         limit: limit,
         offset: offset,
@@ -65,73 +74,71 @@ class App extends Component {
     };
     let me = this
     let query = paramsToQuery(params)
-    let promiseLinksTopTracks = me.fetchSpotify('https://api.spotify.com/v1/me/top/tracks?'+query)
+    let promisesAll = []
+    let counter = 0
+    let promiseLinksTopArtists = me.fetchSpotify('https://api.spotify.com/v1/me/top/artists?'+query)
     .then(jsondata=>
-      jsondata['items'].map(item => {
-        let id = item['href'].substring(item['href'].indexOf('tracks')+7,item['href'].length)
-        let link = item['href'].replace('tracks','audio-features')
-        me.setState(prevState => {
-          let newtracks = {...prevState.tracks}
-          let newtrack = {...newtracks[id]}
-          newtrack.name = item['name']
-          newtrack.artist = item['artists'][0]['name'],
-          newtrack.link = link
-          newtrack.preview_url = item['preview_url']
-          newtracks[id] = newtrack
-          return {
-            tracks: newtracks
-          }
-        })
-        return link
-    }))
-    let promisesState = []
-    let promiseAnalysis = promiseLinksTopTracks.then(value => { 
-      let counter = 0
-      value.forEach((link,index,array) => me.fetchSpotify(link).then(response => {
-        let id = response.id
-        let promiseState = me.setState(prevState => {
-          let newtracks = {...prevState.tracks}
-          let newtrack = {...newtracks[id]}        
-          newtrack.analysis = _.pick(response,['acousticness','danceability','energy'])//,'energy','instrumentalness','loudness','valence','key','time_signature','tempo','liveness','speechiness',
-          newtrack['link']=null
-          newtracks[id] = newtrack    
-          return {
-            tracks: newtracks
-          }
-        })
-
-        promisesState.push(promiseState)
+      jsondata['items'].forEach((item,index,array) => {
+        let id = item['id']
         counter++
-        console.log(counter)
-        console.log(index)
-        if (counter==array.length){
-          Promise.all(promisesState).then(()=>{
-            let tracksdic = Object.keys(me.state.tracks).reduce((map,id)=>{
-              map[id]=Object.values(me.state.tracks[id].analysis)
-              return map
-            },{})
-            me.initTSNE(tracksdic)
-            let output = me.runTSNE()
-            output = me.scaleOutput(output, containerWidth, containerHeight)
-            me.updateStateWithTSNE(tracksdic,output)
+        let promiseState = me.setState(prevState => {
+          let artists = {...prevState.artists}
+          let newartist = {...artists[id]}
+          newartist.name = item['name']
+          newartist.genres = item['genres'],
+          newartist.popularity = item['popularity']
+          if (!newartist.importance) newartist.importance = 0
+          newartist.importance += GetImportance(time_range)
+          artists[id] = newartist
+          return {
+            artists: artists
+          }
+        })
+        promisesAll.push(promiseState)
+        if(counter==array.length){
+          Promise.all(promisesAll).then(()=>{
+            if(callback) callback()
           })
         }
-      }))      
+    }))
+    promisesAll.push(promiseLinksTopArtists)
+  }
+  constructGraph(){
+    var me = this
+    let graph = {}
+    let artistslist = Object.values(me.state.artists).map((val,index,array)=>{
+      let newval = {...val}
+      newval['id']=Object.keys(me.state.artists)[index]
+      return newval
     })
-  }
-  initTSNE(tracksdic){
-    model.init({
-      data: Object.values(tracksdic),
-      type: 'dense'
-    });
-  }
-  runTSNE(){
-    console.log('alldone')
-    let me = this
-    model.run();
-    let output = model.getOutput();
-    //console.log(output)
-    return output
+    artistslist.forEach((artist,index,array)=>{
+      let neighbours = []
+      artistslist.forEach((artist2,index2,array2)=>{
+        if(artist!=artist2){
+          let intersectionlength = artist.genres.filter(function(n) {
+            return artist2.genres.indexOf(n) !== -1;
+          }).length;
+          if (intersectionlength > 0){
+            let obj = {}
+            obj[artist2.id]=intersectionlength
+            neighbours.push(obj)
+          }
+        }        
+      })
+      graph[artist.id]=neighbours
+    })
+    Object.keys(graph).forEach((id)=>{
+      me.setState((prevState)=>{
+        let artists = {...prevState.artists}
+        let newartist = artists[id]
+        newartist['neighbours']=graph[id]
+        artists[id]=newartist
+        return {
+          artists: artists
+        }
+      })
+    })
+    
   }
   scaleOutput(output,width, height, offsetX=0,offsetY=0){
     let xs = output.map((data)=>(data[0]))
@@ -147,28 +154,7 @@ class App extends Component {
     return newoutput
     
   }  
-  updateStateWithTSNE(dictionary,output){
-    let me = this
-    let promises = []
-    Object.keys(dictionary).forEach((id,index,array)=>{
-      let promise = me.setState(prevState => {
-        let newtracks = {...prevState.tracks}
-        let newtrack = {...newtracks[id]}
-        newtrack['x']=output[index][0]
-        newtrack['y']=output[index][1]
-        newtracks[id] = newtrack      
-        return {
-          tracks: newtracks
-        }
-      })
-      promises.push(promise)
-    })
-    Promise.all(promises,()=>{
-      setInterval(function() {
-        model.rerun()
-      }, 5000);
-    })
-  }
+  
 
   render() {
     let me = this
@@ -177,16 +163,18 @@ class App extends Component {
         { this.state.token==null?<a href='http://localhost:8888/login' > Login to Spotify </a>:
           null
         }
-        <Stage width={containerWidth} height={containerHeight}>
-        <Layer>
+        <InteractiveForceGraph  zoom simulationOptions={{ height: window.innerHeight, width: window.innerWidth }}>
+        
+          
         {
-          Object.values(me.state.tracks).map((track)=>{
-            return <Track x={track.x} y={track.y} name={track.name}/>
-          })
+          me.state.artists?Object.values(me.state.artists).map((artist,index)=>{
+            let id = Object.keys(me.state.artists)[index]
+            return <ForceGraphNode key={id} node={{ id: id }} fill="red" />
+        }):null
         }
-        </Layer>
-        </Stage>
-      
+        
+          
+        </InteractiveForceGraph>
       </div>
     );
   }

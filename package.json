@@ -11,6 +11,7 @@
     "react-konva": "^1.7.2",
     "react-plotly.js": "^2.1.0",
     "react-scripts": "1.1.4",
+    "react-vis-force": "^0.3.1",
     "spotify-web-api-js": "^0.24.0",
     "tsne-js": "^1.0.3"
   },
