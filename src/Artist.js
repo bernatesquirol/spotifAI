@@ -2,7 +2,7 @@
 import React from 'react';
 import { Stage, Container, Rect, Text } from "react-konva";
 import Konva from 'konva';
-const Track = ({ x,y,name }) => (
+const Artist = ({ x,y,name }) => (
     <Text
         x={x}
         y={y}
@@ -11,4 +11,4 @@ const Track = ({ x,y,name }) => (
     
 );
 
-export default Track;
+export default Artist;

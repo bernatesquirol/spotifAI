@@ -2,12 +2,12 @@ import React, { Component } from 'react';
 import logo from './logo.svg';
 import './App.css';
 import queryString from 'query-string'
-
 import _ from 'lodash';
 import { Stage, Layer, Rect, Text } from "react-konva";
 import Konva from 'konva';
-import Track from './Track'
-import {InteractiveForceGraph, ForceGraphNode, ForceGraphLink} from 'react-vis-force';
+import Graph from './Graph'
+
+
 const paramsToQuery = (params) => {
   let esc = encodeURIComponent;
   let query = Object.keys(params)
@@ -39,6 +39,7 @@ class App extends Component {
     this.state = {
       token: null,
       artists: {},
+      createGraph:false
     }
   }
   fetchSpotify(link){
@@ -55,8 +56,7 @@ class App extends Component {
     let access_token = parsed.access_token
     if (access_token) {
       this.setState({
-        token:access_token,
-        tracks:{}
+        token:access_token,        
       },()=>{this.getArtists(50,0,'short_term',
               ()=>{this.getArtists(50,0,'medium_term',
                 ()=>{this.getArtists(50,0,'long_term',()=>{this.constructGraph()})})
@@ -127,8 +127,9 @@ class App extends Component {
       })
       graph[artist.id]=neighbours
     })
+    let promises = []
     Object.keys(graph).forEach((id)=>{
-      me.setState((prevState)=>{
+      let promise = me.setState((prevState)=>{
         let artists = {...prevState.artists}
         let newartist = artists[id]
         newartist['neighbours']=graph[id]
@@ -137,23 +138,14 @@ class App extends Component {
           artists: artists
         }
       })
+      promises.push(promise)
+    })
+    Promise.all(promises).then(()=>{
+      me.setState({createGraph:true})
     })
     
   }
-  scaleOutput(output,width, height, offsetX=0,offsetY=0){
-    let xs = output.map((data)=>(data[0]))
-    let ys = output.map((data)=>(data[1]))
-    let minxs = Math.min(...xs)
-    let minys = Math.min(...ys)
-    let xdiff = Math.abs(Math.max(...xs)-minxs)
-    let ydiff = Math.abs(Math.max(...ys)-minys)
-    console.log(Math.max(minxs))
-    console.log(xs)
-    let newoutput = output.map((data)=>([Math.round((data[0]-minxs)*width/xdiff),Math.round((data[1]-minys)*height/ydiff)]))
-    console.log(newoutput)
-    return newoutput
-    
-  }  
+   
   
 
   render() {
@@ -163,18 +155,8 @@ class App extends Component {
         { this.state.token==null?<a href='http://localhost:8888/login' > Login to Spotify </a>:
           null
         }
-        <InteractiveForceGraph  zoom simulationOptions={{ height: window.innerHeight, width: window.innerWidth }}>
+        <Graph readyToDraw={this.state.createGraph} height={window.innerHeight} width={window.innerWidth} data={me.state.artists}/>
         
-          
-        {
-          me.state.artists?Object.values(me.state.artists).map((artist,index)=>{
-            let id = Object.keys(me.state.artists)[index]
-            return <ForceGraphNode key={id} node={{ id: id }} fill="red" />
-        }):null
-        }
-        
-          
-        </InteractiveForceGraph>
       </div>
     );
   }
