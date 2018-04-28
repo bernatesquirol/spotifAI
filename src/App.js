@@ -5,8 +5,8 @@ import queryString from 'query-string'
 import _ from 'lodash';
 import { Stage, Layer, Rect, Text } from "react-konva";
 import Konva from 'konva';
+import Graph2 from './Graph2'
 import Graph from './Graph'
-
 
 const paramsToQuery = (params) => {
   let esc = encodeURIComponent;
@@ -41,6 +41,7 @@ class App extends Component {
       artists: {},
       createGraph:false
     }
+   
   }
   fetchSpotify(link){
     let me = this
@@ -50,9 +51,7 @@ class App extends Component {
     }).then(response => response.json())
   }
   componentDidMount(){
-    
     let parsed = queryString.parse(window.location.search)
-
     let access_token = parsed.access_token
     if (access_token) {
       this.setState({
@@ -111,6 +110,7 @@ class App extends Component {
       newval['id']=Object.keys(me.state.artists)[index]
       return newval
     })
+    let links = []
     artistslist.forEach((artist,index,array)=>{
       let neighbours = []
       artistslist.forEach((artist2,index2,array2)=>{
@@ -128,6 +128,9 @@ class App extends Component {
       graph[artist.id]=neighbours
     })
     let promises = []
+    me.setState((prevState)=>{
+      
+    })
     Object.keys(graph).forEach((id)=>{
       let promise = me.setState((prevState)=>{
         let artists = {...prevState.artists}

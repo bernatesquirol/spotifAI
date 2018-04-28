@@ -18,6 +18,7 @@ class Graph2 extends Component {
         this.state = {
             readyToDraw:false
         }
+        this.graphRef = React.createRef();
     }    
     static getDerivedStateFromProps(nextProps, prevState){
         let newState = {...prevState}
@@ -39,10 +40,15 @@ class Graph2 extends Component {
         return _.map(Object.keys(me.props.data),(item,index)=>
         {
             //let node = _.pick(me.props.data[item],['name'])
-            
             return <ForceGraphNode key={item} r={me.props.data[item]['importance']} node={{ id: item, label: me.props.data[item]['name'] }} fill="red" showLabel/>
         }
         )
+    }
+    componentDidUpdate(prevProps, prevState, snapshot){
+        if(prevState.readyToDraw ){
+            console.log("yeah")
+            
+        }
     }
     render(){
         let me = this
@@ -50,13 +56,17 @@ class Graph2 extends Component {
         const edges = me.state.readyToDraw ? me.getEdges() : null
         const graph = me.state.readyToDraw ? (
             <InteractiveForceGraph 
+                ref={this.graphRef}
+                labelAttr="label"
+                highlightDependencies={true}
                 zoom 
-                simulationOptions={{ height: me.props.height, width: me.props.width }}
+                zoomOptions={{scale:10}}
+                simulationOptions={{ height: me.props.height, width: me.props.width, animate:true }}
                 onSelectNode={(event,node) => {
                     console.log(node['label'])
                     //console.log(event)
                 }}
-                highlightDependencies
+                
             >
             {nodes}
             {edges}
@@ -64,6 +74,11 @@ class Graph2 extends Component {
           ) : (
             null
           );
+        /*if(this.graphRef.current){
+            console.log(this.graphRef.current)
+        }*/
+          
+        //this.graphRef.zoomTo(0,0,3)
         return(
             <div>{graph}
             </div>
