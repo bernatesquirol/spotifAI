@@ -5,9 +5,9 @@ import queryString from 'query-string'
 import _ from 'lodash';
 import { Stage, Layer, Rect, Text } from "react-konva";
 import Konva from 'konva';
-import Graph2 from './Graph2'
-import Graph from './Graph'
 
+import Graph from './Graph'
+import {AsyncPriorityQueue, AsyncTask} from 'async-priority-queue'
 const paramsToQuery = (params) => {
   let esc = encodeURIComponent;
   let query = Object.keys(params)
@@ -15,40 +15,39 @@ const paramsToQuery = (params) => {
     .join('&');
   return query
 }
-const GetImportance = (range)=>{
-  let returnval = 0
-  switch(range){
-    case 'short_term':
-      returnval = 1
-      break;
-    case 'medium_term':
-      returnval = 3
-      break;
-    case 'long_term':
-      returnval = 4
-      break;
-  }
-  return returnval
-}
+
 
 const containerWidth = window.innerWidth
 const containerHeight = window.innerHeight
+const  queue = new AsyncPriorityQueue({debug:false,maxParallel:1,processingFrequency:20});
 class App extends Component {
   constructor(){
     super();
     this.state = {
       token: null,
       artists: {},
-      createGraph:false
+      artistsCandidates:{},
+      links: {},
+      createGraph:false   
     }
-   
+    
   }
+  checkIfDone(){
+    console.log(queue)
+  }
+
   fetchSpotify(link){
     let me = this
-    
-    return fetch(link,{
-      headers: {'Authorization': 'Bearer '+me.state.token}
-    }).then(response => response.json())
+    let task = new AsyncTask({
+      priority: 'high',
+      callback: function() {
+        return fetch(link,{
+          headers: {'Authorization': 'Bearer '+me.state.token}
+        }).then(response => response.json())
+      }
+    })
+    queue.enqueue(task);
+    return task.promise
   }
   componentDidMount(){
     let parsed = queryString.parse(window.location.search)
@@ -56,14 +55,13 @@ class App extends Component {
     if (access_token) {
       this.setState({
         token:access_token,        
-      },()=>{this.getArtists(50,0,'short_term',
-              ()=>{this.getArtists(50,0,'medium_term',
-                ()=>{this.getArtists(50,0,'long_term',()=>{this.constructGraph()})})
-              })
-            })
-      
+      },()=>{
+        queue.start()
+        this.getArtists(50,0,'short_term')
+        this.getArtists(50,0,'medium_term')
+        this.getArtists(50,0,'long_term')
+      })
     }
-    
   }
   getArtists(limit=50, offset=0, time_range='medium_term', callback=null){    
     let params = {
@@ -73,34 +71,73 @@ class App extends Component {
     };
     let me = this
     let query = paramsToQuery(params)
-    let promisesAll = []
-    let counter = 0
-    let promiseLinksTopArtists = me.fetchSpotify('https://api.spotify.com/v1/me/top/artists?'+query)
+    me.fetchSpotify('https://api.spotify.com/v1/me/top/artists?'+query)
     .then(jsondata=>
+      jsondata['items'] ?
       jsondata['items'].forEach((item,index,array) => {
         let id = item['id']
-        counter++
-        let promiseState = me.setState(prevState => {
+        me.setState(prevState => {
           let artists = {...prevState.artists}
           let newartist = {...artists[id]}
+          let beforetops = newartist.tops || {}
+          beforetops[time_range]=index
+          newartist.tops=beforetops
           newartist.name = item['name']
           newartist.genres = item['genres'],
           newartist.popularity = item['popularity']
-          if (!newartist.importance) newartist.importance = 0
-          newartist.importance += GetImportance(time_range)
+          newartist.order = 0
+          newartist.connections = []
           artists[id] = newartist
-          return {
-            artists: artists
+          
+          return {artists: artists}
+        },()=>me.getArtistDetails(id,2))
+    }):null)
+  }
+  getArtistDetails(id, order){
+    //me.setState((prevState)=>())
+    let me = this
+    me.fetchSpotify('https://api.spotify.com/v1/artists/'+id+'/related-artists')
+    .then(jsondata=>
+      jsondata['artists']?
+      jsondata['artists'].slice(0,10).forEach((item,index,array)=>{
+        let idneighbour = item['uri'].substr(item['uri'].indexOf('artist:')+7)
+        
+        me.setState(prevState => {
+          //let linksartist = prevState.links[idneighbour]?[...prevState.links[idneighbour]]:[]
+          let link = {}
+          let returnstate = {}
+          let artistismain = false
+          let artist = prevState.artists[idneighbour]
+          if(artist==null) artist = prevState.artistsCandidates[idneighbour]
+          else artistismain = true
+          if(artist==null){
+            artist = {}
+            artist.connections = []
+            artist.name =  item['name']
+            artist.genres = item['genres'],
+            artist.popularity = item['popularity']
+            artist.order = order
+            //artistsC[idneighbour] = artist
+            //returnstate.artistsCandidates = artistsC            
           }
+
+          if(artist.connections.indexOf(id)<0 && prevState.artists[id].connections.indexOf(idneighbour)<0 ){
+            artist.connections.push(id)
+          } 
+          if(artistismain){
+            let artists = {...prevState.artists}
+            artists[idneighbour] = artist
+            returnstate.artists = artists
+          }else{
+            let artists = {...prevState.artistsCandidates}
+            artists[idneighbour]=artist
+            returnstate.artistsCandidates = artists
+          }   
+          return returnstate
         })
-        promisesAll.push(promiseState)
-        if(counter==array.length){
-          Promise.all(promisesAll).then(()=>{
-            if(callback) callback()
-          })
-        }
-    }))
-    promisesAll.push(promiseLinksTopArtists)
+              
+      })
+      :null)
   }
   constructGraph(){
     var me = this
@@ -158,7 +195,7 @@ class App extends Component {
         { this.state.token==null?<a href='http://localhost:8888/login' > Login to Spotify </a>:
           null
         }
-        <Graph readyToDraw={this.state.createGraph} height={window.innerHeight} width={window.innerWidth} data={me.state.artists}/>
+        <Graph height={window.innerHeight} createGraph={this.state.createGraph} width={window.innerWidth} artists={me.state.artists}  artistsCandidates={me.state.artistsCandidates}/>
         
       </div>
     );
