@@ -21,7 +21,22 @@
 .App-intro {
   font-size: large;
 }
-
+.links line{
+  stroke: grey
+}
+.flag{
+  background-color: #000;
+  width:'10';
+  height:'10';
+  position: absolute;
+  background: url('https://dl.dropboxusercontent.com/s/yx2q52k9g420tov/flags.png') no-repeat;
+}
+.tooltip{
+  position: absolute;
+  background-color: lightgrey;
+  padding: 10px;
+}
+  
 @keyframes App-logo-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

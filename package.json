@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "async-priority-queue": "^0.1.2",
+    "axios": "^0.18.0",
     "d3": "^5.1.0",
     "d3-force": "^1.1.0",
     "konva": "^2.0.3",
