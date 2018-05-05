@@ -1,7 +1,14 @@
-body {
+
+html, body {
   margin: 0;
+  height: 100%;
+}
+body {
+  border: 1px solid transparent;
+  overflow-y: hidden;
+  font-family: 'Montserrat', sans-serif;
   padding: 0;
-  font-family: sans-serif;
+  background:linear-gradient(#3C8D2F,#0A4600) no-repeat
 }
 .node{
   background-color: yellow;
