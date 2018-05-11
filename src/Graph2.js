@@ -12,14 +12,23 @@ const AddConnectionsToGraph = (graph,id, conn)=>{
     })
 }
 
-const Uniform = (dictionary, field, selectedIds)=>{
-    let orderedSel = selectedIds? selectedIds.map((x)=>dictionary[x]): _.orderBy(Object.values(dictionary),field);
-    let init = 0
-    let step = 1/orderedSel.length
-    orderedSel.forEach((item, index)=>{
+const Uniform = (dictionary, field)=>{
+    let orderedSel = _.orderBy(Object.values(dictionary),field);
+    
+    let step = 100/orderedSel.length
+    /*orderedSel.forEach((item, index)=>{
         dictionary[item.id][field] = init+step*index
+    })*/
+    let before = 0
+    _.forEach(orderedSel, (item)=>{
+        before +=step
+        dictionary[item.id][field] = Math.floor(before)
+        
     })
     return dictionary
+}
+const UniformOrdered = ()=>{
+
 }
 const GetRadius=(artist)=>{
     return 10
@@ -108,13 +117,14 @@ const GetClusters = (graph, artists)=>{
     return clusters
 }
 const GetColoredArtists = (artists, clusters)=>{
-    let numPartition = 60/clusters.length
-    let randomStart = Math.random()*60
+    let numPartition = 360/clusters.length
+    let randomStart = Math.random()*360
     let newArtists = {...artists}
+
     clusters.forEach((list,index,array)=>{
-        let hue =Math.random()*360///(334+Math.random()*60)%360//(index+1)*numPartition+randomStart
+        let hue = (index+1)*numPartition+randomStart///(334+Math.random()*60)%360//
         list.forEach((key)=>{
-            newArtists[key].radius = 5+newArtists[key].importance*10
+            newArtists[key].radius = 5+newArtists[key].importance/10
             newArtists[key].hue=hue
             newArtists[key].light=0.5//newArtists[key].freshness?newArtists[key].freshness:0.5
         })
@@ -186,19 +196,22 @@ class Graph2 extends Component {
         })
         Uniform(artistsDic,'freshness')
         Uniform(artistsDic,'importance')
-        
+        let candidatesDic = {}
+        let orderedList = 
         candidatesSelected.forEach((item)=>{
             let artist = nextProps.artistsCandidates[item]
             artist.importance = GetImportanceCandidate(graph, item, artistsDic)
             artist.id = item
             //newartist.connections = artist.connections
-            artistsDic[artist.id] = artist
+            candidatesDic[artist.id] = artist
         })
-        Uniform(artistsDic,'importance', candidatesSelected)
-        let clusters = GetClusters(graph, artistsDic)
-        artistsDic = GetColoredArtists(artistsDic,clusters)
-        let artists = Object.values(artistsDic)
-        newState.artistsDic
+        Uniform(candidatesDic,'importance')
+        let allArtistsDic = {...artistsDic, ...candidatesDic};
+        let clusters = GetClusters(graph, allArtistsDic)
+        
+        artistsDic = GetColoredArtists(allArtistsDic,clusters)
+        let artists = Object.values(allArtistsDic)
+        
         newState.nodes=artists
         newState.links= _.flatMap(artists,(item,index)=>{
             let key = item.id
@@ -272,6 +285,7 @@ class Graph2 extends Component {
                     d.timeoutIdOver=null;
                 }else d.timeoutIdOut=window.setTimeout(function(){
                         d.timeoutIdOut=null;fade(d,1)},20)
+                
             })
         let circle = node.append("circle")
             .attr("r",(d)=>{
@@ -339,6 +353,7 @@ class Graph2 extends Component {
         }
         function dragstarted(d) {
             if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+            d.dragging = true
             d3.select(this).raise().classed("active", true);
         } 
         function dragged(d) {
@@ -347,6 +362,7 @@ class Graph2 extends Component {
         }
         function dragended(d) {
             if (!d3.event.active) simulation.alphaTarget(0);
+            d.dragging = false
             d3.select(this).classed("active", false);
             
         }
