@@ -4,9 +4,9 @@ import _ from 'lodash';
 
 
 const AddConnectionsToGraph = (graph,id, conn)=>{
+    if(!graph[id]) graph[id]=[]
     conn.forEach((key)=>{
-        if(!graph[key]) graph[key]=[]
-        if(!graph[id]) graph[id]=[]
+        if(!graph[key]) graph[key]=[]        
         graph[key].push(id)
         graph[id].push(key)
     })
@@ -79,34 +79,39 @@ const GetFreshness = (artist)=>{
     })
     return returnval/Object.keys(artist.tops).length
 }
-
-const GetColoredArtists= (graph, artists)=>{
-    let newArtists = {...artists}
-    let clusters = []
-    let notvisited = Object.keys(artists)
-    while (notvisited.length!=0){
-        let idSelected = notvisited[Math.floor(Math.random()*notvisited.length)]
-        let cluster = []
-        let clusterElementsToVisit = [idSelected]        
-        while(clusterElementsToVisit.length!=0){
-            let node = clusterElementsToVisit.pop()
-            cluster.push(node)
-            notvisited.splice(notvisited.indexOf(node),1)
-            clusterElementsToVisit.splice(clusterElementsToVisit.indexOf(node),1)
-            if (graph[node]){
-                graph[node].forEach((key)=>{
-                    if (cluster.indexOf(key)<0)clusterElementsToVisit.push(key)
-                })
-            }
-            
-        }
-        clusters.push(cluster)
+const GetClusters = (graph, artists)=>{
+    let artistsVisited = {}
+    let indexCluster = 0
+    Object.keys(artists).forEach((id)=>{
+        artistsVisited[id]=false    
+    })
+    Object.keys(artists).forEach((id)=>{
+        if (artistsVisited[id]===false) {
+            artistsVisited[id]=indexCluster
+            DFSFunc(id, indexCluster)
+            indexCluster++            
+        }        
+    })
+    function DFSFunc(id, indexCluster){
+        artistsVisited[id]=indexCluster
+        if(graph[id]) graph[id].forEach((idneigh)=>{
+            if(artistsVisited[idneigh]===false)DFSFunc(idneigh, indexCluster)
+        })
     }
+    let clusters = new Array(indexCluster);
+    Object.keys(artistsVisited).forEach((artist)=>{
+        let clusterid = artistsVisited[artist]
+        if (!clusters[clusterid]) clusters[clusterid]=[]
+        clusters[clusterid].push(artist)
+    })
+    return clusters
+}
+const GetColoredArtists = (artists, clusters)=>{
     let numPartition = 60/clusters.length
     let randomStart = Math.random()*60
-    
+    let newArtists = {...artists}
     clusters.forEach((list,index,array)=>{
-        let hue =(334+Math.random()*60)%360//(index+1)*numPartition+randomStart
+        let hue =Math.random()*360///(334+Math.random()*60)%360//(index+1)*numPartition+randomStart
         list.forEach((key)=>{
             newArtists[key].radius = 5+newArtists[key].importance*5
             newArtists[key].hue=hue
@@ -145,8 +150,7 @@ class Graph2 extends Component {
         
     }    
 
-    static getDerivedStateFromProps(nextProps, prevState){
-        
+    static getDerivedStateFromProps(nextProps, prevState){        
         let newState = {...prevState}
         let maxConn = 0
         let minConn = 100
@@ -160,15 +164,22 @@ class Graph2 extends Component {
         },[])
         //create graph
         let graph = {}
+        let marginated = ["4DBi4EYXgiqbkxvWUXUzMi", "023YMawCG3OvACmRjWxLWC", "6A43Djmhbe9100UwnI7epV", "1ZpPJRe9erwiWi548SKVyn", "4I2BJf80C0skQpp1sQmA0h", "2ipLXsa6gga693rXXCruWu", "7Kfrmups2Z3ncDQmNS5jRc", "2YZyLoL8N0Wb9xBt1NhZWg", "7ENzCHnmJUr20nUjoZ0zZ1", "7ITd48RbLVpUfheE7B86o2", "5INjqkS1o8h1imAzPqGZBb"]
         Object.keys(nextProps.artists).forEach((item)=>{
             let artist = nextProps.artists[item]
+            if (marginated.includes(item)){
+                console.log(item)
+            }
             AddConnectionsToGraph(graph,item,artist.connections)
         })        
         candidatesSelected.forEach((item)=>{
             let artist = nextProps.artistsCandidates[item]
+            if (marginated.includes(item)){
+                console.log(item)
+            }
             AddConnectionsToGraph(graph,item,artist.connections)
         })
-        //if(nextProps.drawGraph){
+        
         let artistsDic = {}
         //importance
         Object.keys(nextProps.artists).forEach((item)=>{
@@ -190,8 +201,8 @@ class Graph2 extends Component {
             artistsDic[artist.id] = artist
         })
         Normalize(artistsDic,'importance')
-        
-        artistsDic = GetColoredArtists(graph, artistsDic)
+        let clusters = GetClusters(graph, artistsDic)
+        artistsDic = GetColoredArtists(artistsDic,clusters)
         let artists = Object.values(artistsDic)
         newState.artistsDic
         newState.nodes=artists
@@ -203,7 +214,7 @@ class Graph2 extends Component {
             return edges    
         })
         //this.DrawGraph(newState.nodes,newState.links)
-        
+        newState.graph = graph
         return newState
     }
     componentDidUpdate(){
@@ -222,17 +233,19 @@ class Graph2 extends Component {
         let distanceLinks = 25
         var simulation = d3.forceSimulation()
             .force("link", d3.forceLink().distance((d)=>{
-                let returnval = distanceLinks+10*GetDistance(d.source,d.target)
-                return distanceLinks}).strength(1.1).id(function(d) { return d.id; }))
-            .force("charge", d3.forceManyBody())
+                let returnval = distanceLinks+(me.state.graph[d.source.id].length+me.state.graph[d.target.id].length)//10*GetDistance(d.source,d.target)
+                console.log(d.source.name+" "+d.target.name+" "+returnval)
+                return distanceLinks
+            }).strength(1.1).id(function(d) { return d.id; }))
+            .force("charge", d3.forceManyBody().strength((d)=>{
+                console.log(d)
+                return -100*me.state.graph[d.id].length}))
             .force("center", d3.forceCenter(width / 2, height / 2))
-            .force("r", d3.forceRadial(100))
-            
-        if(width<500 && height/width>1.7){
-            //simulation.force("forceX", d3.forceX().strength(.1).x(width * .5))
-        }
-            //.force("forceY", d3.forceY().strength(.1).y(height * .5))
-            
+            .force("x1", d3.forceX().strength(140/width))
+            .force("y1", d3.forceY().strength(120/height))
+            //.force("r", d3.forceRadial(0).strength(160/width))
+         //x = 0.35*width -> 140
+         //y = 0.15*height -> 120
         let g1 = svg.append("g");
         let g2 = svg.append("g");
         let link = g1.append("g")
@@ -251,7 +264,9 @@ class Graph2 extends Component {
             .selectAll("nodes")
             .data(nodes)
             .enter().append("g")
-            .call(drag);
+            .call(drag)
+            .on('mousedown.fade', fade(0.1))        
+            .on('mouseout.fade', fade(1))
         let circle = node.append("circle")
             .attr("r",(d)=>{return d.radius})
             .attr("fill", function(d) { 
@@ -262,8 +277,7 @@ class Graph2 extends Component {
                 return  "hsla("+d.hue+",100%,45%,"+alpha+")"
             })
             .attr("stroke-width",2)
-            .on('mousedown.fade', fade(0.1))        
-            .on('mouseout.fade', fade(1))
+           
             
         let text = node.append("text")
                 //.append('tspan')
@@ -272,8 +286,8 @@ class Graph2 extends Component {
                 .attr("fill",'white')
                 .text((d)=>{return d.name})
                 .attr("font-size",(d)=>{return d.radius*2/3})
-                .on('mousedown.fade', fade(0.1))        
-                .on('mouseout.fade', fade(1))
+                //.on('mousedown.fade', fade(0.1))        
+                //.on('mouseout.fade', fade(1))
 
         simulation.on("tick", ticked);
         simulation
@@ -283,15 +297,14 @@ class Graph2 extends Component {
         simulation.force("link")
             .links(links);
         function ticked() {
-            console.log("ticked")
             link
                 .attr("x1", function(d) { return d.source.x; })
                 .attr("y1", function(d) { return d.source.y; })
                 .attr("x2", function(d) { return d.target.x; })
                 .attr("y2", function(d) { return d.target.y; });
             circle
-                .attr("cx", function(d) { return d.x=Math.max(d.radius, Math.min(width - d.radius, d.x)); })
-                .attr("cy", function(d) { return d.y=Math.max(d.radius, Math.min(height - d.radius, d.y)); });
+                .attr("cx", function(d) { return d.x=d.x })//Math.max(d.radius, Math.min(width - d.radius, d.x));
+                .attr("cy", function(d) { return d.y=d.y });//
             text
                 .attr("x", function(d) { return d.x; })
                 .attr("y", function(d) { return d.y; });
@@ -301,38 +314,19 @@ class Graph2 extends Component {
         .on("zoom", zoomed)
 
         svg.call(zoom)
-        .call(zoom.transform, d3.zoomIdentity.translate(-500, -500).scale(2))
-        
-        
-
+        //.call(zoom.transform, d3.zoomIdentity.translate(-500, -500).scale(2))
         function zoomed() {
             g1.attr("transform", d3.event.transform);
             g2.attr("transform", d3.event.transform);
         }
-
         function dragstarted(d) {
             if (!d3.event.active) simulation.alphaTarget(0.3).restart();
             d3.select(this).raise().classed("active", true);
-            //d3.event.sourceEvent.stopPropagation();
-            //d3.select(this).classed("dragging", true);
-          }
-          
+        } 
         function dragged(d) {
-            d.fx = Math.max(d.radius, Math.min(width - d.radius, d3.event.x));
-            d.fy =  Math.max(d.radius, Math.min(width - d.radius, d3.event.y));
-            /*d3.select(this).select("text")
-                .attr("x", d.x = d3.event.x)
-                .attr("y", d.y = d3.event.y);
-            d3.select(this).select("circle")
-                .attr("cx", d.x = d3.event.x)
-                .attr("cy", d.y = d3.event.y);
-            link
-                .attr("x1", function(d) { return d.source.x; })
-                .attr("y1", function(d) { return d.source.y; })
-                .attr("x2", function(d) { return d.target.x; })
-                .attr("y2", function(d) { return d.target.y; });*/
+            d.fx = d3.event.x// Math.max(d.radius, Math.min(width - d.radius, ));
+            d.fy =  d3.event.y//Math.max(d.radius, Math.min(width - d.radius, d3.event.y));
         }
-        
         function dragended(d) {
             if (!d3.event.active) simulation.alphaTarget(0);
             d3.select(this).classed("active", false);
