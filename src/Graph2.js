@@ -11,18 +11,15 @@ const AddConnectionsToGraph = (graph,id, conn)=>{
         graph[id].push(key)
     })
 }
-const Normalize = (dictionary, field)=>{
-    let max = 0
-    let min = 10000000
-    Object.values(dictionary).forEach((item)=>{
-        if (item[field]>max) max = item[field]
-        if (item[field]<min) min = item[field]
+
+const Uniform = (dictionary, field, selectedIds)=>{
+    let orderedSel = selectedIds? selectedIds.map((x)=>dictionary[x]): _.orderBy(Object.values(dictionary),field);
+    let init = 0
+    let step = 1/orderedSel.length
+    orderedSel.forEach((item, index)=>{
+        dictionary[item.id][field] = init+step*index
     })
-    return Object.keys(dictionary).map((key)=>{
-        let item = dictionary[key]
-        item[field] = (item[field]-min)/(max-min)
-        return item
-    })
+    return dictionary
 }
 const GetRadius=(artist)=>{
     return 10
@@ -37,8 +34,12 @@ const GetFill = (artist)=>{
 const GetBorder = (artist)=>{
     
 }
-const GetImportanceCandidate = (graph,id)=>{
-    return graph[id].length
+const GetImportanceCandidate = (graph,id, artists)=>{
+    let importance = 0
+    graph[id].forEach((item)=>{
+        importance+=artists[item].importance
+    })
+    return importance
 }
 const GetImportance = (artist)=>{    
     let returnval = 0
@@ -113,7 +114,7 @@ const GetColoredArtists = (artists, clusters)=>{
     clusters.forEach((list,index,array)=>{
         let hue =Math.random()*360///(334+Math.random()*60)%360//(index+1)*numPartition+randomStart
         list.forEach((key)=>{
-            newArtists[key].radius = 5+newArtists[key].importance*5
+            newArtists[key].radius = 5+newArtists[key].importance*10
             newArtists[key].hue=hue
             newArtists[key].light=0.5//newArtists[key].freshness?newArtists[key].freshness:0.5
         })
@@ -164,19 +165,12 @@ class Graph2 extends Component {
         },[])
         //create graph
         let graph = {}
-        let marginated = ["4DBi4EYXgiqbkxvWUXUzMi", "023YMawCG3OvACmRjWxLWC", "6A43Djmhbe9100UwnI7epV", "1ZpPJRe9erwiWi548SKVyn", "4I2BJf80C0skQpp1sQmA0h", "2ipLXsa6gga693rXXCruWu", "7Kfrmups2Z3ncDQmNS5jRc", "2YZyLoL8N0Wb9xBt1NhZWg", "7ENzCHnmJUr20nUjoZ0zZ1", "7ITd48RbLVpUfheE7B86o2", "5INjqkS1o8h1imAzPqGZBb"]
         Object.keys(nextProps.artists).forEach((item)=>{
             let artist = nextProps.artists[item]
-            if (marginated.includes(item)){
-                console.log(item)
-            }
             AddConnectionsToGraph(graph,item,artist.connections)
         })        
         candidatesSelected.forEach((item)=>{
             let artist = nextProps.artistsCandidates[item]
-            if (marginated.includes(item)){
-                console.log(item)
-            }
             AddConnectionsToGraph(graph,item,artist.connections)
         })
         
@@ -190,17 +184,17 @@ class Graph2 extends Component {
             artist.id = item            
             artistsDic[artist.id] = artist
         })
-        Normalize(artistsDic,'freshness')
-        ////Normalize(artists,'importance')
+        Uniform(artistsDic,'freshness')
+        Uniform(artistsDic,'importance')
         
         candidatesSelected.forEach((item)=>{
             let artist = nextProps.artistsCandidates[item]
-            artist.importance = GetImportanceCandidate(graph, item)
+            artist.importance = GetImportanceCandidate(graph, item, artistsDic)
             artist.id = item
             //newartist.connections = artist.connections
             artistsDic[artist.id] = artist
         })
-        Normalize(artistsDic,'importance')
+        Uniform(artistsDic,'importance', candidatesSelected)
         let clusters = GetClusters(graph, artistsDic)
         artistsDic = GetColoredArtists(artistsDic,clusters)
         let artists = Object.values(artistsDic)
@@ -235,14 +229,14 @@ class Graph2 extends Component {
             .force("link", d3.forceLink().distance((d)=>{
                 let returnval = distanceLinks+(me.state.graph[d.source.id].length+me.state.graph[d.target.id].length)//10*GetDistance(d.source,d.target)
                 console.log(d.source.name+" "+d.target.name+" "+returnval)
-                return distanceLinks
-            }).strength(1.1).id(function(d) { return d.id; }))
+                return returnval
+            }).strength(0.25).id(function(d) { return d.id; }))
             .force("charge", d3.forceManyBody().strength((d)=>{
-                console.log(d)
-                return -100*me.state.graph[d.id].length}))
+                return -d.radius*20
+            }))
             .force("center", d3.forceCenter(width / 2, height / 2))
-            .force("x1", d3.forceX().strength(140/width))
-            .force("y1", d3.forceY().strength(120/height))
+            .force("x1", d3.forceX().strength(170/width))
+            .force("y1", d3.forceY().strength(160/height))
             //.force("r", d3.forceRadial(0).strength(160/width))
          //x = 0.35*width -> 140
          //y = 0.15*height -> 120
@@ -265,10 +259,27 @@ class Graph2 extends Component {
             .data(nodes)
             .enter().append("g")
             .call(drag)
-            .on('mousedown.fade', fade(0.1))        
-            .on('mouseout.fade', fade(1))
+            .on('mouseover.fade', (d)=> {
+                if (d.timeoutIdOut){ 
+                    window.clearTimeout(d.timeoutIdOut);  
+                    d.timeoutIdOut=null;
+                }else d.timeoutIdOver=window.setTimeout(function(){
+                    d.timeoutIdOver=null; fade(d,0.1)},20)
+            })
+            .on('mouseout.fade', (d)=>{
+                if (d.timeoutIdOver){ 
+                    window.clearTimeout(d.timeoutIdOver);                    
+                    d.timeoutIdOver=null;
+                }else d.timeoutIdOut=window.setTimeout(function(){
+                        d.timeoutIdOut=null;fade(d,1)},20)
+            })
         let circle = node.append("circle")
-            .attr("r",(d)=>{return d.radius})
+            .attr("r",(d)=>{
+                let radius = d.radius
+                if(width <500) radius*=width/600
+                if(height <850) radius*=height/850
+                return radius
+            })
             .attr("fill", function(d) { 
                 let alpha = d.order==0?1:0
                 return  "hsla("+d.hue+",100%,45%,"+alpha+")"})
@@ -302,9 +313,16 @@ class Graph2 extends Component {
                 .attr("y1", function(d) { return d.source.y; })
                 .attr("x2", function(d) { return d.target.x; })
                 .attr("y2", function(d) { return d.target.y; });
-            circle
-                .attr("cx", function(d) { return d.x=d.x })//Math.max(d.radius, Math.min(width - d.radius, d.x));
-                .attr("cy", function(d) { return d.y=d.y });//
+            if(width<600){
+                circle
+                .attr("cx", function(d) { return d.x=d.x})//Math.max(d.radius, Math.min(width - d.radius, d.x)); 
+                .attr("cy", function(d) { return d.y=d.y});
+            }else{
+                circle
+                .attr("cx", function(d) { return d.x=Math.max(d.radius, Math.min(width - d.radius, d.x));})// 
+                .attr("cy", function(d) { return d.y=Math.max(d.radius, Math.min(height - d.radius, d.y));});//
+            }
+           
             text
                 .attr("x", function(d) { return d.x; })
                 .attr("y", function(d) { return d.y; });
@@ -314,7 +332,7 @@ class Graph2 extends Component {
         .on("zoom", zoomed)
 
         svg.call(zoom)
-        //.call(zoom.transform, d3.zoomIdentity.translate(-500, -500).scale(2))
+        //.call(zoom.transform, d3.zoomIdentity.scale(0.75).translate(width / 4, height / 4))
         function zoomed() {
             g1.attr("transform", d3.event.transform);
             g2.attr("transform", d3.event.transform);
@@ -339,8 +357,7 @@ class Graph2 extends Component {
         function isConnected(a, b) {
             return linkedByIndex[`${a.index},${b.index}`] || linkedByIndex[`${b.index},${a.index}`] || a.index === b.index;
         }
-        function fade(opacity) {
-            return d => {
+        function fade(d, opacity) {
             circle.style('stroke-opacity', function (o) {
                 const thisOpacity = isConnected(d, o) ? 1 : opacity;
                 this.setAttribute('fill-opacity', thisOpacity);
@@ -354,8 +371,6 @@ class Graph2 extends Component {
                 return thisOpacity;
             });
             };
-        }
-   
    
       }
     render(){
