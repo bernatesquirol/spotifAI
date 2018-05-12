@@ -4,22 +4,18 @@
   "private": true,
   "dependencies": {
     "async-priority-queue": "^0.1.2",
-    "axios": "^0.18.0",
     "d3": "^5.1.0",
     "d3-force": "^1.1.0",
-    "konva": "^2.0.3",
     "lodash": "^4.17.5",
-    "plotly.js": "^1.36.1",
     "react": "^16.3.2",
     "react-dom": "^16.3.2",
     "react-flexbox-grid": "^2.1.0",
-    "react-konva": "^1.7.2",
     "react-load-script": "0.0.6",
     "react-plotly.js": "^2.1.0",
     "react-scripts": "1.1.4",
     "react-vis-force": "^0.3.1",
-    "spotify-web-api-js": "^0.24.0",
-    "tsne-js": "^1.0.3"
+    "spotify-web-api-js": "^0.24.0"
+    
   },
   "scripts": {
     "start": "react-scripts start",

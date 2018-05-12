@@ -1,7 +1,7 @@
 import React,{Component}from 'react';
 
 import _ from 'lodash';
-
+import Details from './Details'
 
 const AddConnectionsToGraph = (graph,id, conn)=>{
     if(!graph[id]) graph[id]=[]
@@ -13,7 +13,7 @@ const AddConnectionsToGraph = (graph,id, conn)=>{
 }
 
 const Uniform = (dictionary, field)=>{
-    let orderedSel = _.orderBy(Object.values(dictionary),field);
+    let orderedSel = _.orderBy(Object.values(dictionary),field,'desc');
     
     let step = 100/orderedSel.length
     /*orderedSel.forEach((item, index)=>{
@@ -25,7 +25,7 @@ const Uniform = (dictionary, field)=>{
         dictionary[item.id][field] = Math.floor(before)
         
     })
-    return dictionary
+    return orderedSel
 }
 const UniformOrdered = ()=>{
 
@@ -66,7 +66,7 @@ const GetImportance = (artist)=>{
                 multiplier = 3
                 break;
         }
-        returnval+=multiplier/value
+        returnval+=multiplier
     })
     return returnval
 }
@@ -122,7 +122,7 @@ const GetColoredArtists = (artists, clusters)=>{
     let newArtists = {...artists}
 
     clusters.forEach((list,index,array)=>{
-        let hue = (index+1)*numPartition+randomStart///(334+Math.random()*60)%360//
+        let hue = Math.round((index+1)*numPartition+randomStart)///(334+Math.random()*60)%360//
         list.forEach((key)=>{
             newArtists[key].radius = 5+newArtists[key].importance/10
             newArtists[key].hue=hue
@@ -205,13 +205,13 @@ class Graph2 extends Component {
             //newartist.connections = artist.connections
             candidatesDic[artist.id] = artist
         })
-        Uniform(candidatesDic,'importance')
+        let orderedCandidates = Uniform(candidatesDic,'importance')
         let allArtistsDic = {...artistsDic, ...candidatesDic};
         let clusters = GetClusters(graph, allArtistsDic)
         
         artistsDic = GetColoredArtists(allArtistsDic,clusters)
         let artists = Object.values(allArtistsDic)
-        
+        newState.orderedCandidates = orderedCandidates
         newState.nodes=artists
         newState.links= _.flatMap(artists,(item,index)=>{
             let key = item.id
@@ -222,6 +222,7 @@ class Graph2 extends Component {
         })
         //this.DrawGraph(newState.nodes,newState.links)
         newState.graph = graph
+        newState.createGraph = true
         return newState
     }
     componentDidUpdate(){
@@ -236,12 +237,14 @@ class Graph2 extends Component {
         let width = +svg.attr("width")
         let height = +svg.attr("height")
 
-        
+        svg.on('mousedown.fade', (d)=>{
+            me.setState({selectedHue:null})
+        }) 
         let distanceLinks = 25
         var simulation = d3.forceSimulation()
             .force("link", d3.forceLink().distance((d)=>{
                 let returnval = distanceLinks+(me.state.graph[d.source.id].length+me.state.graph[d.target.id].length)//10*GetDistance(d.source,d.target)
-                console.log(d.source.name+" "+d.target.name+" "+returnval)
+               //console.log(d.source.name+" "+d.target.name+" "+returnval)
                 return returnval
             }).strength(0.25).id(function(d) { return d.id; }))
             .force("charge", d3.forceManyBody().strength((d)=>{
@@ -277,7 +280,7 @@ class Graph2 extends Component {
                     window.clearTimeout(d.timeoutIdOut);  
                     d.timeoutIdOut=null;
                 }else d.timeoutIdOver=window.setTimeout(function(){
-                    d.timeoutIdOver=null; fade(d,0.1)},20)
+                    d.timeoutIdOver=null; fade(d,0.1)},200)
             })
             .on('mouseout.fade', (d)=>{
                 if (d.timeoutIdOver){ 
@@ -287,6 +290,7 @@ class Graph2 extends Component {
                         d.timeoutIdOut=null;fade(d,1)},20)
                 
             })
+                   
         let circle = node.append("circle")
             .attr("r",(d)=>{
                 let radius = d.radius
@@ -302,6 +306,9 @@ class Graph2 extends Component {
                 return  "hsla("+d.hue+",100%,45%,"+alpha+")"
             })
             .attr("stroke-width",2)
+            .on('mousedown.fade', (d)=>{
+                me.setState({selectedHue:d.hue})
+            }) 
            
             
         let text = node.append("text")
@@ -311,6 +318,9 @@ class Graph2 extends Component {
                 .attr("fill",'white')
                 .text((d)=>{return d.name})
                 .attr("font-size",(d)=>{return d.radius*2/3})
+                .on('mousedown.fade', (d)=>{
+                    me.setState({selectedHue:d.hue})
+                }) 
                 //.on('mousedown.fade', fade(0.1))        
                 //.on('mouseout.fade', fade(1))
 
@@ -391,12 +401,26 @@ class Graph2 extends Component {
       }
     render(){
         let me = this
-        if(me.props.createGraph){
+        if(me.state.createGraph){
             if(!me.state.readyToDraw)me.setState({readyToDraw:true})
-            else me.DrawGraph()
+            else {
+                me.setState({createGraph:false})
+                me.DrawGraph()
+            }
         }
+        let styleDiv = {}
+        let widthsvg = me.props.width
+        let heightsvg = me.props.height
+        let prop = 0.8
+        if (widthsvg/heightsvg>1) {prop=0.7;widthsvg *= prop; }
+        else heightsvg *= prop
         return(
-            me.props.createGraph?<svg width={me.props.width} height={me.props.height}></svg>:
+            me.props.createGraph?
+                <div>
+                    <svg width={widthsvg} height={heightsvg}></svg>
+                    <Details selectedHue={me.state.selectedHue} orderedCandidates={me.state.orderedCandidates} prop={prop} width={me.props.width} height={me.props.height}/>
+                </div>
+            :
             <div className="title" style={{marginTop:me.props.height/2-100}}>Loading { Math.round((1-me.props.loading)*100)}%</div>
         )
     }
