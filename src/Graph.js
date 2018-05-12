@@ -233,7 +233,7 @@ class Graph2 extends Component {
       zoomOptions={{scale:10}}
       simulationOptions={{ height: me.props.height, width: me.props.width,  animate:true }}
       onSelectNode={(event,node) => {
-          console.log(node['label'])
+          //console.log(node['label'])
           //console.log(event)
       }}                
       >

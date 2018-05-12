@@ -50,7 +50,7 @@ class App extends Component {
       //console.log(JSON.stringify(this.state.artists))
       //console.log(JSON.stringify(this.state.artistsCandidates))
       this.setState({createGraph:true})
-      console.log('ARA TOCA GRAPH')
+      
     }
   }
 
@@ -167,7 +167,6 @@ class App extends Component {
    
   sampleData(){
     let me = this
-    console.log('sample')
     me.setState(()=>({
       artistsCandidates: Me.artistsCandidates,
       artists: Me.artists,
@@ -178,12 +177,9 @@ class App extends Component {
   render() {
     let me = this
     let link ='https://spotifai-backend.herokuapp.com/login' //'http://localhost:8888/login'
-    console.log('renderingagain  '+me.state.createGraph)
+    //console.log('renderingagain  '+me.state.createGraph)
     let loading = me.state.enqueued/me.state.maxEnqueued
-    let graphOrLoading = ()=>{
-      console.log(me.state.createGraph)
-      
-      }
+    
     return (
       <div className="App" >
         { this.state.token==null?

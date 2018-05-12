@@ -19,12 +19,13 @@ const Uniform = (dictionary, field)=>{
     /*orderedSel.forEach((item, index)=>{
         dictionary[item.id][field] = init+step*index
     })*/
-    let before = 0
+    let before = 100
     _.forEach(orderedSel, (item)=>{
-        before +=step
+        before -=step
         dictionary[item.id][field] = Math.floor(before)
         
     })
+    
     return orderedSel
 }
 const UniformOrdered = ()=>{
@@ -48,7 +49,14 @@ const GetImportanceCandidate = (graph,id, artists)=>{
     graph[id].forEach((item)=>{
         importance+=artists[item].importance
     })
-    return importance
+    return importance/graph[id].length
+}
+const GetFreshnessCandidate = (graph,id, artists)=>{
+    let freshness = 0
+    graph[id].forEach((item)=>{
+        freshness+=artists[item].freshness
+    })
+    return freshness/graph[id].length
 }
 const GetImportance = (artist)=>{    
     let returnval = 0
@@ -117,16 +125,29 @@ const GetClusters = (graph, artists)=>{
     return clusters
 }
 const GetColoredArtists = (artists, clusters)=>{
-    let numPartition = 360/clusters.length
+    
     let randomStart = Math.random()*360
     let newArtists = {...artists}
-
+    let numAlone = clusters.filter((array)=>(array.length==1)).length
+    let numPartition = 360/(clusters.length-numAlone)
+    let indexPartition = 0
+    //console.log(clusters)
     clusters.forEach((list,index,array)=>{
-        let hue = Math.round((index+1)*numPartition+randomStart)///(334+Math.random()*60)%360//
+        let hue = Math.round((indexPartition+1)*numPartition+randomStart)///(334+Math.random()*60)%360//
+        if(list.length>1)indexPartition++
         list.forEach((key)=>{
             newArtists[key].radius = 5+newArtists[key].importance/10
             newArtists[key].hue=hue
-            newArtists[key].light=0.5//newArtists[key].freshness?newArtists[key].freshness:0.5
+            let light = 0
+            light = 50
+            if (newArtists[key].freshness) light= newArtists[key].freshness*0.5+25
+            newArtists[key].saturation = true
+            
+            if (list.length<=1){
+                //console.log("fsdafasdf")
+                newArtists[key].saturation = false
+            }
+            newArtists[key].light=light
         })
     })
     
@@ -165,29 +186,36 @@ class Graph2 extends Component {
         let newState = {...prevState}
         let maxConn = 0
         let minConn = 100
-        
-        let candidatesSelected = Object.keys(nextProps.artistsCandidates).reduce((result, item)=>{
-            let numconn = nextProps.artistsCandidates[item].connections.length
+        let propsArtists = {...nextProps.artists}
+        let propsArtistsCandidates = {...nextProps.artistsCandidates}
+        let candidatesSelected = Object.keys(propsArtistsCandidates).reduce((result, item)=>{
+            let numconn = propsArtistsCandidates[item].connections.length
             if(numconn>maxConn) maxConn=numconn
             if(numconn<minConn) minConn=numconn
             if(numconn > 1) result.push(item)
+            else {
+                let connections = [...propsArtists[propsArtistsCandidates[item].connections[0]].connections]
+                let index = connections.indexOf(item);
+                connections.splice(index,1)
+                propsArtists[propsArtistsCandidates[item].connections[0]].connections = connections
+            }
             return result
         },[])
         //create graph
         let graph = {}
-        Object.keys(nextProps.artists).forEach((item)=>{
-            let artist = nextProps.artists[item]
+        Object.keys(propsArtists).forEach((item)=>{
+            let artist = propsArtists[item]
             AddConnectionsToGraph(graph,item,artist.connections)
         })        
         candidatesSelected.forEach((item)=>{
-            let artist = nextProps.artistsCandidates[item]
+            let artist = propsArtistsCandidates[item]
             AddConnectionsToGraph(graph,item,artist.connections)
         })
         
         let artistsDic = {}
         //importance
-        Object.keys(nextProps.artists).forEach((item)=>{
-            let artist = nextProps.artists[item]
+        Object.keys(propsArtists).forEach((item)=>{
+            let artist = propsArtists[item]
             artist.importance = GetImportance(artist)
             artist.freshness = GetFreshness(artist)
             //artist.hue = GetRandomHue(artist)            
@@ -201,14 +229,15 @@ class Graph2 extends Component {
         candidatesSelected.forEach((item)=>{
             let artist = nextProps.artistsCandidates[item]
             artist.importance = GetImportanceCandidate(graph, item, artistsDic)
+            artist.freshness = GetFreshnessCandidate(graph, item, artistsDic)
             artist.id = item
             //newartist.connections = artist.connections
             candidatesDic[artist.id] = artist
         })
         let orderedCandidates = Uniform(candidatesDic,'importance')
+        Uniform(candidatesDic,'freshness')
         let allArtistsDic = {...artistsDic, ...candidatesDic};
-        let clusters = GetClusters(graph, allArtistsDic)
-        
+        let clusters = GetClusters(graph, allArtistsDic)        
         artistsDic = GetColoredArtists(allArtistsDic,clusters)
         let artists = Object.values(allArtistsDic)
         newState.orderedCandidates = orderedCandidates
@@ -298,12 +327,15 @@ class Graph2 extends Component {
                 if(height <850) radius*=height/850
                 return radius
             })
+            
             .attr("fill", function(d) { 
                 let alpha = d.order==0?1:0
-                return  "hsla("+d.hue+",100%,45%,"+alpha+")"})
+                let saturation = d.saturation?100:0
+                return  "hsla("+d.hue+","+saturation+"%,"+d.light+"%,"+alpha+")"})
             .attr("stroke",(d)=>{
                 let alpha = d.order==0?0:1
-                return  "hsla("+d.hue+",100%,45%,"+alpha+")"
+                let saturation = d.saturation?100:0
+                return  "hsla("+d.hue+","+saturation+"%,"+d.light+"%,"+alpha+")"
             })
             .attr("stroke-width",2)
             .on('mousedown.fade', (d)=>{
@@ -401,7 +433,7 @@ class Graph2 extends Component {
       }
     render(){
         let me = this
-        console.log('render'+ me.state.createGraph+' ')
+        //console.log('render'+ me.state.createGraph+' ')
         if(me.state.createGraph){
             
             if(!me.state.readyToDraw)me.setState({readyToDraw:true})

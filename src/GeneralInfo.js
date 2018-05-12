@@ -22,7 +22,6 @@ const GetAllArtists = (orderedList, height, horizontal, selectedHue)=>{
     let maxItems = 10
     
     let styleDiv = {overflowY:  'scroll',}
-    console.log(height)
     if(horizontal){
         height-=105
         while(height>(maxItems+1)*heightItem){
@@ -31,7 +30,6 @@ const GetAllArtists = (orderedList, height, horizontal, selectedHue)=>{
         }
     }
     height*=0.95
-    console.log(height)
     styleDiv = {...styleDiv, maxHeight:height, height:height, overflowX:'hidden' }
     //console.log(numItems+' '+height)
     return (<Grid style={styleDiv}>
@@ -63,13 +61,13 @@ const GeneralInfo = ({selectedHue, horizontal,prop,width, height, artistex, arti
        <Row >
           <Col  xs={xs}>
             <svg style={{maxHeight:horizontal?'100px':height, width:'100%'}}>
-            <line x1={artist.x+'%'} y1={artist.y+'%'} x2={artistCandidates.x+'%'} y2={artistCandidates.y+'%'} style={{stroke:'rgba(0,0,0,0.5)',strokeWidth:2 }} />
+                <line x1={artist.x+'%'} y1={artist.y+'%'} x2={artistCandidates.x+'%'} y2={artistCandidates.y+'%'} style={{stroke:'rgba(0,0,0,0.5)',strokeWidth:2 }} />
                 <circle cx={artist.x+'%'} cy={artist.y+'%'} r={artist.r+'%'} stroke={'#4DB83D'} stroke-width="4" fill={'#4DB83D'} />
-                <text fontWeight={'bolder'} fontSize={'60%'} text-anchor="middle" x={artist.x+'%'} y={texty+'%'}>
+                <text fontWeight={'bolder'} fontSize={'60%'} textAnchor="middle" x={artist.x+'%'} y={texty+'%'}>
                 Artist you <br/>listen to
                 </text>
-                <circle cx={artistCandidates.x+'%'} cy={artistCandidates.y+'%'} r={artistCandidates.r+'%'} stroke={'#4DB83D'} stroke-width="4" fill={'rgba(0,0,0,0)'}/>
-                <text fontWeight={'bolder'} fontSize={'60%'} text-anchor="middle" x={artistCandidates.x+'%'} y={textCy+'%'}>
+                <circle cx={artistCandidates.x+'%'} cy={artistCandidates.y+'%'} r={artistCandidates.r+'%'} stroke={'#4DB83D'} strokeWidth="4" fill={'rgba(0,0,0,0)'}/>
+                <text fontWeight={'bolder'} fontSize={'60%'} textAnchor="middle" x={artistCandidates.x+'%'} y={textCy+'%'}>
                 Related artist
                 </text>
             </svg>
