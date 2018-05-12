@@ -50,6 +50,7 @@ class App extends Component {
       //console.log(JSON.stringify(this.state.artists))
       //console.log(JSON.stringify(this.state.artistsCandidates))
       this.setState({createGraph:true})
+      console.log('ARA TOCA GRAPH')
     }
   }
 
@@ -166,19 +167,26 @@ class App extends Component {
    
   sampleData(){
     let me = this
+    console.log('sample')
     me.setState(()=>({
       artistsCandidates: Me.artistsCandidates,
       artists: Me.artists,
       
-    }),me.setState({createGraph:true}))
+    }),()=>{me.setState({token:true,createGraph:true})})
   }
 
   render() {
     let me = this
-    let link ='https://spotifai-backend.herokuapp.com/login' //'http://localhost:8888/login'//
+    let link ='https://spotifai-backend.herokuapp.com/login' //'http://localhost:8888/login'
+    console.log('renderingagain  '+me.state.createGraph)
+    let loading = me.state.enqueued/me.state.maxEnqueued
+    let graphOrLoading = ()=>{
+      console.log(me.state.createGraph)
+      
+      }
     return (
       <div className="App" >
-        { this.state.token==null && !this.state.createGraph?
+        { this.state.token==null?
         
         <div className="title" style={{marginTop:containerHeight/2-100}}>
           Discover how <img src={spotifyico} width='100em' style={{paddingTop:'50px'}}/> works
@@ -188,7 +196,19 @@ class App extends Component {
           
         </div>
         :
-          <Graph2 loading={me.state.enqueued/me.state.maxEnqueued} height={window.innerHeight} createGraph={me.state.createGraph} width={window.innerWidth*0.95} artists={me.state.artists}  artistsCandidates={me.state.artistsCandidates}/> 
+          (
+            me.state.createGraph? (
+            <Graph2 height={window.innerHeight} 
+            createGraph={me.state.createGraph} 
+            width={window.innerWidth*0.95} 
+            artists={me.state.artists}  
+            artistsCandidates={me.state.artistsCandidates}/> )
+            :  (
+            <div className="title" style={{marginTop:window.innerHeight/2-100}}>Loading { Math.round((1-loading)*100)}%</div>
+          )
+         
+          )
+          
         }
                
         

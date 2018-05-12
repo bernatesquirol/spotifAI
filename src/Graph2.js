@@ -401,7 +401,9 @@ class Graph2 extends Component {
       }
     render(){
         let me = this
+        console.log('render'+ me.state.createGraph+' ')
         if(me.state.createGraph){
+            
             if(!me.state.readyToDraw)me.setState({readyToDraw:true})
             else {
                 me.setState({createGraph:false})
@@ -415,13 +417,12 @@ class Graph2 extends Component {
         if (widthsvg/heightsvg>1) {prop=0.7;widthsvg *= prop; }
         else heightsvg *= prop
         return(
-            me.props.createGraph?
-                <div>
-                    <svg width={widthsvg} height={heightsvg}></svg>
-                    <Details selectedHue={me.state.selectedHue} orderedCandidates={me.state.orderedCandidates} prop={prop} width={me.props.width} height={me.props.height}/>
-                </div>
-            :
-            <div className="title" style={{marginTop:me.props.height/2-100}}>Loading { Math.round((1-me.props.loading)*100)}%</div>
+            <div>
+                <svg width={widthsvg} height={heightsvg}></svg>
+                <Details selectedHue={me.state.selectedHue} orderedCandidates={me.state.orderedCandidates} prop={prop} width={me.props.width} height={me.props.height}/>
+            </div>
+            
+            
         )
     }
 }
