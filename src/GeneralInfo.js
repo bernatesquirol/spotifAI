@@ -1,5 +1,6 @@
-import React from 'react';
+import React,{Component} from 'react';
 import { Grid, Row, Col } from 'react-flexbox-grid';
+import SvgInfo from './SvgInfo'
 const GetArtist = (artist, index, height, maxItems)=>{
     return (<Row style={{width:'100%',height:height}}>
     
@@ -24,7 +25,7 @@ const GetAllArtists = (orderedList, height, horizontal, selectedHue)=>{
     let styleDiv = {overflowY:  'scroll',}
     if(horizontal){
         height-=105
-        while(height>(maxItems+1)*heightItem){
+        while(height-40>(maxItems+1)*heightItem){
             maxItems++
             styleDiv.overflowY='hidden'
         }
@@ -33,44 +34,36 @@ const GetAllArtists = (orderedList, height, horizontal, selectedHue)=>{
     styleDiv = {...styleDiv, maxHeight:height, height:height, overflowX:'hidden' }
     //console.log(numItems+' '+height)
     return (<Grid style={styleDiv}>
+    <Row style={{width:'100%',height:40, fontWeight:'bolder', textAlign:'center'}}>
+    <div style={{textAlign:'center', width:'100%'}}>
+    Suggested artists
+    </div>
+    </Row>
     {orderedListReal.slice(0,maxItems).map((artist, index)=>{
         return GetArtist(artist, index, heightItem, maxItems)
     })}
     </Grid>)
   
 }
-const GeneralInfo = ({selectedHue, horizontal,prop,width, height, artistex, artistcex, orderedCandidates}) => {
-    let artist = {...artistex, x:50, y:20, r:7, hue:117}
-    
-    let artistCandidates = {...artistcex, x:50, y:75, r:7, hue:117}
-    if(horizontal){
-        let x = artistCandidates.x 
-        artistCandidates.x = artistCandidates.y
-        artistCandidates.y = x
-        x = artist.x
-        artist.x = artist.y
-        artist.y = x
+class GeneralInfo extends Component {
+    constructor(){
+        super();
+        this.state = {
+            page:0
+        }
     }
-    let xs = (horizontal) ? 12:5
+    render() {
+    let {selectedHue, horizontal,prop,width, height, artistex, artistcex, orderedCandidates} = this.props
+    let xs = (horizontal) ? 12:4
     let xs2 = (horizontal) ? 12:7
-    let textCy = (horizontal) ? 15 : artistCandidates.y
-    let texty =(horizontal) ? 15 : artist.y
-
     return (
        <Grid style={{paddingLeft:horizontal?'7px':'0px', paddingTop:horizontal?'10px':'5px'}}>
+       
        <Row >
-          <Col  xs={xs}>
-            <svg style={{maxHeight:horizontal?'100px':height, width:'100%'}}>
-                <line x1={artist.x+'%'} y1={artist.y+'%'} x2={artistCandidates.x+'%'} y2={artistCandidates.y+'%'} style={{stroke:'rgba(0,0,0,0.5)',strokeWidth:2 }} />
-                <circle cx={artist.x+'%'} cy={artist.y+'%'} r={artist.r+'%'} stroke={'#4DB83D'} stroke-width="4" fill={'#4DB83D'} />
-                <text fontWeight={'bolder'} fontSize={'60%'} textAnchor="middle" x={artist.x+'%'} y={texty+'%'}>
-                Artist you <br/>listen to
-                </text>
-                <circle cx={artistCandidates.x+'%'} cy={artistCandidates.y+'%'} r={artistCandidates.r+'%'} stroke={'#4DB83D'} strokeWidth="4" fill={'rgba(0,0,0,0)'}/>
-                <text fontWeight={'bolder'} fontSize={'60%'} textAnchor="middle" x={artistCandidates.x+'%'} y={textCy+'%'}>
-                Related artist
-                </text>
-            </svg>
+          <Col  xs={xs} style={{ cursor: 'pointer',userSelect: 'none'}} onClick={()=>{this.setState((prevState)=>{
+              return {page:(prevState.page+1)%3}})}}>
+            <div style={{height:!horizontal?'20px':null, fontWeight:'bolder'}}>Tips ({this.state.page+1}/3)</div>
+            <SvgInfo page={this.state.page} horizontal={horizontal} style={{maxHeight:horizontal?'80px':height*0.9, width:'100%'}} />                
           </Col>
           <Col xs={xs2} >
           {GetAllArtists(orderedCandidates, height,horizontal, selectedHue)}
@@ -79,5 +72,6 @@ const GeneralInfo = ({selectedHue, horizontal,prop,width, height, artistex, arti
        </Grid>
     )
     
-};
+    }
+}
 export default GeneralInfo;
