@@ -172,7 +172,8 @@ class App extends Component {
 
   render() {
     let me = this
-    let link = 'https://accounts.spotify.com/authorize?scope=user-top-read&response_type=token&client_id=d6ecd46788d1428f85da28f281f1d5f9&redirect_uri=https://spotifai.netlify.app/callback'//'https://spotifai-backend.herokuapp.com/login' //'http://localhost:8888/login'
+    let link = 'https://accounts.spotify.com/authorize?scope=user-top-read&response_type=token&client_id=d6ecd46788d1428f85da28f281f1d5f9&redirect_uri='+window.location.protocol+'//'+window.location.host+'/callback'
+    // http://localhost:3000'//'https://spotifai-backend.herokuapp.com/login' //'http://localhost:8888/login'
     //console.log('renderingagain  '+me.state.createGraph)
     let loading = me.state.enqueued/me.state.maxEnqueued
     
@@ -183,7 +184,7 @@ class App extends Component {
         <div className="title" style={{marginTop:containerHeight/2-100}}>
           Discover how <img alt="nophoto" src={spotifyico} width='100em' style={{paddingTop:'50px'}}/> works
           
-          <p style={{fontSize:'5vw'}}><a href={link}>Login</a> or <a onClick={()=>{me.sampleData()}} >use sample data</a>  </p>
+          <p style={{fontSize:'5vw'}}><a href={link}>Login</a> or <a onClick={()=>{me.sampleData()}} href="/#" >use sample data</a>  </p>
           
           
         </div>
