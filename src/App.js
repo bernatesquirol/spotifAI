@@ -1,9 +1,6 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
 import './App.css';
 import queryString from 'query-string'
-import _ from 'lodash';
-//import Graph from './Graph'
 import Graph2 from './Graph2'
 import Me from './Me.json'
 import {AsyncPriorityQueue, AsyncTask} from 'async-priority-queue'
@@ -16,19 +13,19 @@ const paramsToQuery = (params) => {
   return query
 }
 
-const GetLoginDiv = (width,height,link,sampledataonclick)=>(
-  <div style={{height:height*0.5,width:Math.min(width*0.5,600), align:'center',backgroundColor:'white',position: 'absolute', top:0, bottom: 0, 
-  left: 0, right: 0, margin: 'auto', borderRadius:20
-  }}>
-  <a href={link} > 
-    Login to spotify
-    </a>
-    <button onClick={sampledataonclick}>
-    Sample data
-  </button>
-  </div>
-)
-const containerWidth = window.innerWidth
+// const GetLoginDiv = (width,height,link,sampledataonclick)=>(
+//   <div style={{height:height*0.5,width:Math.min(width*0.5,600), align:'center',backgroundColor:'white',position: 'absolute', top:0, bottom: 0, 
+//   left: 0, right: 0, margin: 'auto', borderRadius:20
+//   }}>
+//   <a href={link} > 
+//     Login to spotify
+//     </a>
+//     <button onClick={sampledataonclick}>
+//     Sample data
+//   </button>
+//   </div>
+// )
+// const containerWidth = window.innerWidth
 const containerHeight = window.innerHeight
 const  queue = new AsyncPriorityQueue({debug:false,maxParallel:1,processingFrequency:20});
 class App extends Component {
@@ -46,7 +43,7 @@ class App extends Component {
     
   }
   checkIfDone(){
-    if(this.state.enqueued==0){
+    if(this.state.enqueued===0){
       //console.log(JSON.stringify(this.state.artists))
       //console.log(JSON.stringify(this.state.artistsCandidates))
       this.setState({createGraph:true})
@@ -70,7 +67,7 @@ class App extends Component {
     return task.promise
   }
   componentDidMount(){
-    let parsed = queryString.parse(window.location.search)
+    let parsed = queryString.parse(window.location.hash)
     let access_token = parsed.access_token
     if (access_token) {
       this.setState({
@@ -107,7 +104,7 @@ class App extends Component {
           beforetops[time_range]=index
           newartist.tops=beforetops
           newartist.name = item['name']
-          newartist.genres = item['genres'],
+          newartist.genres = item['genres']
           newartist.popularity = item['popularity']
           newartist.order = 0
           newartist.connections = []
@@ -129,7 +126,6 @@ class App extends Component {
         
         me.setState(prevState => {
           //let linksartist = prevState.links[idneighbour]?[...prevState.links[idneighbour]]:[]
-          let link = {}
           let returnstate = {}
           let artistismain = false
           let artist = prevState.artists[idneighbour]
@@ -139,7 +135,7 @@ class App extends Component {
             artist = {}
             artist.connections = []
             artist.name =  item['name']
-            artist.genres = item['genres'],
+            artist.genres = item['genres']
             artist.popularity = item['popularity']
             artist.order = order
             //artistsC[idneighbour] = artist
@@ -176,7 +172,7 @@ class App extends Component {
 
   render() {
     let me = this
-    let link ='https://spotifai-backend.herokuapp.com/login' //'http://localhost:8888/login'
+    let link = 'https://accounts.spotify.com/authorize?scope=user-top-read&response_type=token&client_id=d6ecd46788d1428f85da28f281f1d5f9&redirect_uri=http://localhost:3000/callback'//'https://spotifai-backend.herokuapp.com/login' //'http://localhost:8888/login'
     //console.log('renderingagain  '+me.state.createGraph)
     let loading = me.state.enqueued/me.state.maxEnqueued
     
@@ -185,9 +181,9 @@ class App extends Component {
         { this.state.token==null?
         
         <div className="title" style={{marginTop:containerHeight/2-100}}>
-          Discover how <img src={spotifyico} width='100em' style={{paddingTop:'50px'}}/> works
+          Discover how <img alt="nophoto" src={spotifyico} width='100em' style={{paddingTop:'50px'}}/> works
           
-          <p style={{fontSize:'5vw'}}><a href={link}>Login</a> or <a onClick={()=>{me.sampleData()}} href="#">use sample data</a>  </p>
+          <p style={{fontSize:'5vw'}}><a href={link}>Login</a> or <a onClick={()=>{me.sampleData()}} >use sample data</a>  </p>
           
           
         </div>

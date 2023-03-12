@@ -1,5 +1,4 @@
 import React,{Component} from 'react';
-import { Grid, Row, Col } from 'react-flexbox-grid';
 
 const GetArtist1 = (page)=>{
     switch(page){
@@ -20,10 +19,8 @@ const GetArtist2 = (page)=>{
     switch(page){
         case 0:
             return { x:50, y:75, r:7, stroke: '#4DB83D', fill:'rgb(0,0,0,0)', text:'Related artist'}
-            break;
         case 1:
             return  { x:50, y:75, r:2, stroke: 'hsl(112, 50%, 65%)', fill:'hsl(112, 50%, 65%)',text:'- important'}
-            break;
         case 2:
             return  { x:50, y:75, r:7, stroke: 'hsl(112, 50%, 35%)', fill:'hsl(112, 50%, 35%)',text:'- recent'}
         default:
@@ -32,13 +29,9 @@ const GetArtist2 = (page)=>{
 
 }
 const GetLink = (page)=>{
-    return page==0
+    return page===0
 }
-class SvgInfo extends Component {
-    constructor(){
-        super();
-    }
-    
+class SvgInfo extends Component {    
     render() {
         let horizontal = this.props.horizontal
         let style = this.props.style

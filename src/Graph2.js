@@ -28,22 +28,6 @@ const Uniform = (dictionary, field)=>{
     
     return orderedSel
 }
-const UniformOrdered = ()=>{
-
-}
-const GetRadius=(artist)=>{
-    return 10
-}
-const GetLight=(artist)=>{
-    if (artist.freshness) return artist.freshness*50+25
-    else return 50
-}
-const GetFill = (artist)=>{
-    return 'hsl('+artist.hue+',100%,'+GetLight(artist)+'%)'
-}
-const GetBorder = (artist)=>{
-    
-}
 const GetImportanceCandidate = (graph,id, artists)=>{
     let importance = 0
     graph[id].forEach((item)=>{
@@ -61,7 +45,7 @@ const GetFreshnessCandidate = (graph,id, artists)=>{
 const GetImportance = (artist)=>{    
     let returnval = 0
     Object.keys(artist.tops).forEach((item)=>{
-        let value = artist.tops[item]+1
+        // let value = artist.tops[item]+1
         let multiplier = 0
         switch(item){
             case 'short_term':
@@ -72,6 +56,8 @@ const GetImportance = (artist)=>{
                 break;
             case 'long_term':
                 multiplier = 3
+                break;
+            default:
                 break;
         }
         returnval+=multiplier
@@ -91,6 +77,8 @@ const GetFreshness = (artist)=>{
                 break;
             case 'long_term':
                 multiplier = 1
+                break;
+            default:
                 break;
         }
         returnval+=multiplier
@@ -128,7 +116,7 @@ const GetColoredArtists = (artists, clusters)=>{
     
     let randomStart = Math.random()*360
     let newArtists = {...artists}
-    let numAlone = clusters.filter((array)=>(array.length==1)).length
+    let numAlone = clusters.filter((array)=>(array.length===1)).length
     let numPartition = 360/(clusters.length-numAlone)
     let indexPartition = 0
     //console.log(clusters)
@@ -156,22 +144,22 @@ const GetColoredArtists = (artists, clusters)=>{
 
 const d3 = window.d3
 
-const onlyUnique = (value, index, self) => { 
-    return self.indexOf(value) === index;
-}
-const GetScalated = (prob, min, max)=>{
-    return prob*(max-min) + min
-}
-const GetDistance=(artist1, artist2)=>{
-    let genres1 = _.flatMap(artist1.genres,(item)=>{
-        return item.split(" ")
-    }).filter( onlyUnique );
-    let genres2 = _.flatMap(artist2.genres,(item)=>{
-        return item.split(" ")
-    }).filter( onlyUnique );
-    let intersectSize = _.intersection(genres1, genres2).length
-    return intersectSize>0?Math.min(genres1.length,genres2.length)/intersectSize:2;
-}
+// const onlyUnique = (value, index, self) => { 
+//     return self.indexOf(value) === index;
+// }
+// const GetScalated = (prob, min, max)=>{
+//     return prob*(max-min) + min
+// }
+// const GetDistance=(artist1, artist2)=>{
+//     let genres1 = _.flatMap(artist1.genres,(item)=>{
+//         return item.split(" ")
+//     }).filter( onlyUnique );
+//     let genres2 = _.flatMap(artist2.genres,(item)=>{
+//         return item.split(" ")
+//     }).filter( onlyUnique );
+//     let intersectSize = _.intersection(genres1, genres2).length
+//     return intersectSize>0?Math.min(genres1.length,genres2.length)/intersectSize:2;
+// }
 //https://codepen.io/trey-davis/pen/WOoXyQ?editors=0110
 class Graph2 extends Component {
     constructor(props){
@@ -225,7 +213,6 @@ class Graph2 extends Component {
         Uniform(artistsDic,'freshness')
         Uniform(artistsDic,'importance')
         let candidatesDic = {}
-        let orderedList = 
         candidatesSelected.forEach((item)=>{
             let artist = nextProps.artistsCandidates[item]
             artist.importance = GetImportanceCandidate(graph, item, artistsDic)
@@ -255,8 +242,7 @@ class Graph2 extends Component {
         return newState
     }
     componentDidUpdate(){
-        let me = this
-        
+
     }
     DrawGraph(){
         let me = this
@@ -329,11 +315,11 @@ class Graph2 extends Component {
             })
             
             .attr("fill", function(d) { 
-                let alpha = d.order==0?1:0
+                let alpha = d.order===0?1:0
                 let saturation = d.saturation?100:0
                 return  "hsla("+d.hue+","+saturation+"%,"+d.light+"%,"+alpha+")"})
             .attr("stroke",(d)=>{
-                let alpha = d.order==0?0:1
+                let alpha = d.order===0?0:1
                 let saturation = d.saturation?100:0
                 return  "hsla("+d.hue+","+saturation+"%,"+d.light+"%,"+alpha+")"
             })
@@ -442,7 +428,6 @@ class Graph2 extends Component {
                 me.DrawGraph()
             }
         }
-        let styleDiv = {}
         let widthsvg = me.props.width
         let heightsvg = me.props.height
         let prop = 0.8

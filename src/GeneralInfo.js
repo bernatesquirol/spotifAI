@@ -18,7 +18,7 @@ const GetArtist = (artist, index, height, maxItems)=>{
     </Row>)
 }
 const GetAllArtists = (orderedList, height, horizontal, selectedHue)=>{
-    let orderedListReal = selectedHue ? orderedList.filter((a)=>{ return a.hue==selectedHue}):orderedList
+    let orderedListReal = selectedHue ? orderedList.filter((a)=>{ return a.hue===selectedHue}):orderedList
     let heightItem = 50
     let maxItems = 10
     
@@ -53,7 +53,7 @@ class GeneralInfo extends Component {
         }
     }
     render() {
-    let {selectedHue, horizontal,prop,width, height, artistex, artistcex, orderedCandidates} = this.props
+    let {selectedHue, horizontal, height, orderedCandidates} = this.props
     let xs = (horizontal) ? 12:4
     let xs2 = (horizontal) ? 12:7
     return (
