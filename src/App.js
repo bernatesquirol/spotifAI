@@ -172,7 +172,7 @@ class App extends Component {
 
   render() {
     let me = this
-    let link = 'https://accounts.spotify.com/authorize?scope=user-top-read&response_type=token&client_id=d6ecd46788d1428f85da28f281f1d5f9&redirect_uri=http://localhost:3000/callback'//'https://spotifai-backend.herokuapp.com/login' //'http://localhost:8888/login'
+    let link = 'https://accounts.spotify.com/authorize?scope=user-top-read&response_type=token&client_id=d6ecd46788d1428f85da28f281f1d5f9&redirect_uri=https://spotifai.netlify.app/callback'//'https://spotifai-backend.herokuapp.com/login' //'http://localhost:8888/login'
     //console.log('renderingagain  '+me.state.createGraph)
     let loading = me.state.enqueued/me.state.maxEnqueued
     
